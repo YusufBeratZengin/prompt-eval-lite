@@ -1,0 +1,83 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "prompt-eval-lite"
+version = "0.1.0"
+description = "A zero-dependency regression test runner for LLM prompts: JSON/YAML suites, OpenAI-compatible, Ollama and mock providers, JUnit output, baselines and flakiness measurement."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Yusuf Berat Zengin" }]
+requires-python = ">=3.10"
+keywords = ["llm", "prompt", "evaluation", "regression", "testing", "junit", "ollama", "openai", "ci"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Testing",
+    "Typing :: Typed",
+]
+dependencies = []
+
+[project.optional-dependencies]
+yaml = ["PyYAML>=6.0"]
+dev = [
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.6",
+    "mypy>=1.10",
+    "PyYAML>=6.0",
+    "types-PyYAML",
+    "build",
+    "twine",
+]
+
+[project.scripts]
+prompt-eval = "prompt_eval_lite.cli:main"
+
+[project.urls]
+Homepage = "https://github.com/YusufBeratZengin/prompt-eval-lite"
+Repository = "https://github.com/YusufBeratZengin/prompt-eval-lite"
+Issues = "https://github.com/YusufBeratZengin/prompt-eval-lite/issues"
+Changelog = "https://github.com/YusufBeratZengin/prompt-eval-lite/blob/main/CHANGELOG.md"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/prompt_eval_lite"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src", "tests"]
+addopts = "-q --strict-markers --cov=prompt_eval_lite --cov-report=term-missing"
+
+[tool.coverage.run]
+branch = true
+
+[tool.coverage.report]
+fail_under = 85
+exclude_lines = ["pragma: no cover", "if __name__ == .__main__.:"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I", "B", "UP", "SIM", "C4", "RUF"]
+
+[tool.mypy]
+python_version = "3.10"
+strict = true
+files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["yaml"]
+ignore_missing_imports = true
