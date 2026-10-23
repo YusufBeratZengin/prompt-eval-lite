@@ -1,0 +1,43 @@
+name: Bug report
+description: Something does not work as documented
+labels: [bug]
+body:
+  - type: input
+    id: version
+    attributes:
+      label: prompt-eval-lite version
+      placeholder: "0.1.0"
+    validations: {required: true}
+  - type: input
+    id: os
+    attributes:
+      label: Operating system
+    validations: {required: true}
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+    validations: {required: true}
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      description: A minimal suite file and the command you ran. Remove secrets and personal data.
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected vs actual behavior
+    validations: {required: true}
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or output
+      render: text
+  - type: checkboxes
+    id: search
+    attributes:
+      label: Checks
+      options:
+        - label: I searched existing issues
+          required: true
