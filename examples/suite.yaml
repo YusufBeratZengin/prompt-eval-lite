@@ -1,0 +1,16 @@
+# Same idea as suite.json, in YAML (needs: pip install "prompt-eval-lite[yaml]").
+name: translator
+provider:
+  type: mock
+  rules:
+    - match: Bonjour
+      reply: Hello
+vars:
+  greeting: Bonjour
+tests:
+  - name: translates-greeting
+    prompt: "Translate to English: {{greeting}}"
+    expect:
+      - equals: hello
+        ignore_case: true
+      - max_length: 20

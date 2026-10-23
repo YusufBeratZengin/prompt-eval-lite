@@ -1,0 +1,43 @@
+{
+  "name": "support-bot",
+  "provider": {
+    "type": "mock",
+    "rules": [
+      {"match": "capital of France", "reply": "The capital of France is Paris."},
+      {"match": "Summarize", "reply": "Refunds take 5 days. Contact support@example.com for help."},
+      {"match": "Extract", "reply": "{\"name\": \"Ada\", \"age\": 36}"},
+      {"match": "Greet", "replies": ["Hello, Ada!", "Hello, Ada!", "Hi there"]}
+    ]
+  },
+  "tests": [
+    {
+      "name": "capital",
+      "prompt": "What is the capital of {{country}}?",
+      "vars": {"country": "France"},
+      "expect": [{"contains": "Paris"}, {"not_contains": "Lyon"}, {"max_length": 80}]
+    },
+    {
+      "name": "summary-no-email",
+      "prompt": "Summarize the refund policy.",
+      "expect": [{"contains": "Refunds"}, {"not_contains": "@"}]
+    },
+    {
+      "name": "extract-json",
+      "prompt": "Extract the person as JSON: {{text}}",
+      "vars": {"text": "Ada is 36"},
+      "expect": [
+        {"json_schema": {
+          "type": "object",
+          "required": ["name", "age"],
+          "properties": {"name": {"type": "string"}, "age": {"type": "integer", "minimum": 0}}
+        }}
+      ]
+    },
+    {
+      "name": "greeting",
+      "prompt": "Greet {{who}}",
+      "vars": {"who": "Ada"},
+      "expect": [{"regex": "^Hello, \\w+!$"}]
+    }
+  ]
+}
