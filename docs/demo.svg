@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="310" viewBox="0 0 760 310" role="img" aria-labelledby="t d">
+  <title id="t">prompt-eval-lite terminal output</title>
+  <desc id="d">Real output of prompt-eval run examples/suite.json --repeat 3: two tests pass, one fails, one is flaky.</desc>
+  <rect x="1" y="1" width="758" height="308" rx="12" fill="#0d1117" stroke="#30363d"/>
+  <circle cx="24" cy="24" r="6" fill="#ff5f57"/>
+  <circle cx="44" cy="24" r="6" fill="#febc2e"/>
+  <circle cx="64" cy="24" r="6" fill="#28c840"/>
+  <g font-family="ui-monospace, SFMono-Regular, Consolas, monospace" font-size="14" xml:space="preserve">
+    <text x="32" y="84" fill="#a5b4fc">$ prompt-eval run examples/suite.json --repeat 3</text>
+    <text x="32" y="106" fill="#d1d5db">support-bot - mock - repeat 3</text>
+    <text x="32" y="128" fill="#d1d5db"></text>
+    <text x="32" y="150" fill="#d1d5db">TEST              STATUS   PASS     TIME  DETAIL</text>
+    <text x="32" y="172" fill="#3fb950">capital           pass     100%    0.00s  </text>
+    <text x="32" y="194" fill="#f85149">summary-no-email  fail       0%    0.00s  expected output not to contain '@'</text>
+    <text x="32" y="216" fill="#3fb950">extract-json      pass     100%    0.00s  </text>
+    <text x="32" y="238" fill="#d29922">greeting          flaky     67%    0.00s  no match for regex /^Hello, \w+!$/</text>
+    <text x="32" y="260" fill="#d1d5db"></text>
+    <text x="32" y="282" fill="#d1d5db">4 tests: 2 passed, 1 failed, 1 flaky, 0 errored</text>
+  </g>
+</svg>
