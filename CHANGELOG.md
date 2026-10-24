@@ -6,6 +6,12 @@ All notable changes to this project are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+- Reject HTTP redirects and omit raw HTTP error bodies to protect credentials.
+- Reject non-finite JSON numbers and distinguish booleans from numbers in schema equality.
+- Validate supported JSON Schema fields and nested schemas while loading suites.
+- Replace characters forbidden by XML 1.0 in JUnit text and attributes.
+
 ## [0.1.0] - 2026-10-23
 
 ### Added

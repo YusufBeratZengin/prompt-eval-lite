@@ -17,6 +17,21 @@ EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 SUITE = str(EXAMPLES / "suite.json")
 
 
+@pytest.mark.parametrize("bad", ["\x00", "\x1b", "\x0b", "\ud800", "\ufffe", "\uffff"])
+def test_junit_sanitizes_xml_text_and_attributes(bad: str) -> None:
+    text = f"before{bad}after"
+    rs = [
+        TestResult(text, [RunResult(False, output=text, error=text)]),
+        TestResult("failure", [RunResult(False, output=text, failures=[text])]),
+    ]
+    root = ET.fromstring(to_junit(text, rs))
+    assert root.get("name") == "before\ufffdafter"
+    assert root.find("testcase").get("name") == "before\ufffdafter"
+    assert root.find("testcase/system-out").text == "before\ufffdafter"
+    assert root.find("testcase/error").get("message") == "before\ufffdafter"
+    assert "before\ufffdafter" in root.find("testcase/failure").text
+
+
 def results() -> list[TestResult]:
     suite = load_suite(SUITE)
     provider = MockProvider(**{k: v for k, v in suite.provider.items() if k != "type"})

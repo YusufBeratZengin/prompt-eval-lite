@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import xml.etree.ElementTree as ET
 from typing import Any
 
@@ -11,6 +12,7 @@ from .models import TestResult
 from .runner import summarize
 
 _COLORS = {"pass": "32", "fail": "31", "error": "31", "flaky": "33"}
+_INVALID_XML = re.compile("[^\x09\x0a\x0d\x20-\ud7ff\ue000-\ufffd\U00010000-\U0010ffff]")
 
 
 def _clip(text: str, width: int) -> str:
@@ -89,5 +91,10 @@ def to_junit(suite_name: str, results: list[TestResult]) -> str:
             ET.SubElement(case, "failure", message=text, type="AssertionError").text = text
         if r.runs:
             ET.SubElement(case, "system-out").text = r.runs[-1].output
+    for element in root.iter():
+        for key, value in element.attrib.items():
+            element.set(key, _INVALID_XML.sub("\ufffd", value))
+        if element.text is not None:
+            element.text = _INVALID_XML.sub("\ufffd", element.text)
     ET.indent(root)
     return '<?xml version="1.0" encoding="UTF-8"?>\n' + ET.tostring(root, encoding="unicode") + "\n"

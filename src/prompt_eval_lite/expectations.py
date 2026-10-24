@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from typing import Any
 
@@ -38,7 +39,36 @@ def parse_json_output(text: str) -> Any:
     fenced = _FENCE.match(stripped)
     if fenced:
         stripped = fenced.group(1)
-    return json.loads(stripped)
+    parsed = json.loads(stripped, parse_constant=_reject_constant)
+    if _has_nonfinite(parsed):
+        raise ValueError("non-finite JSON number")
+    return parsed
+
+
+def _reject_constant(value: str) -> Any:
+    raise ValueError(f"invalid JSON constant: {value}")
+
+
+def _has_nonfinite(value: Any) -> bool:
+    if isinstance(value, float):
+        return not math.isfinite(value)
+    if isinstance(value, dict):
+        return any(_has_nonfinite(v) for v in value.values())
+    if isinstance(value, list):
+        return any(_has_nonfinite(v) for v in value)
+    return False
+
+
+def _json_equal(left: Any, right: Any) -> bool:
+    if isinstance(left, bool) or isinstance(right, bool):
+        return type(left) is type(right) and left == right
+    if isinstance(left, dict) and isinstance(right, dict):
+        return left.keys() == right.keys() and all(_json_equal(left[k], right[k]) for k in left)
+    if isinstance(left, list) and isinstance(right, list):
+        return len(left) == len(right) and all(
+            _json_equal(a, b) for a, b in zip(left, right, strict=True)
+        )
+    return bool(left == right)
 
 
 def _type_ok(value: Any, expected: str) -> bool:
@@ -54,14 +84,16 @@ def validate_schema(value: Any, schema: dict[str, Any], path: str = "$") -> list
     minLength, maxLength, minItems, maxItems.
     """
     errors: list[str] = []
+    if _has_nonfinite(value):
+        return [f"{path}: non-finite JSON number"]
     expected = schema.get("type")
     if expected is not None:
         types = expected if isinstance(expected, list) else [expected]
         if not any(_type_ok(value, t) for t in types):
             return [f"{path}: expected {'|'.join(types)}, got {type(value).__name__}"]
-    if "enum" in schema and value not in schema["enum"]:
+    if "enum" in schema and not any(_json_equal(value, item) for item in schema["enum"]):
         errors.append(f"{path}: {value!r} not in enum {schema['enum']!r}")
-    if "const" in schema and value != schema["const"]:
+    if "const" in schema and not _json_equal(value, schema["const"]):
         errors.append(f"{path}: expected constant {schema['const']!r}")
     if isinstance(value, dict):
         for key in schema.get("required", []):

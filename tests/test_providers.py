@@ -1,5 +1,11 @@
 from __future__ import annotations
 
+import io
+import urllib.request
+from email.message import Message
+from typing import Any
+from urllib.response import addinfourl
+
 import pytest
 
 from conftest import FakeLLM
@@ -10,6 +16,66 @@ from prompt_eval_lite import (
     ProviderError,
     make_provider,
 )
+from prompt_eval_lite.loader import parse_suite
+from prompt_eval_lite.report import build_report, format_table, to_json, to_junit
+from prompt_eval_lite.runner import run_suite
+
+
+@pytest.mark.parametrize("location", ["https://other.example/stolen", "http://other.example/"])
+@pytest.mark.parametrize("code", [301, 302, 303, 307, 308])
+def test_http_redirects_are_rejected(
+    monkeypatch: pytest.MonkeyPatch, location: str, code: int
+) -> None:
+    requests = []
+
+    def respond(handler: Any, req: Any) -> Any:
+        requests.append(req)
+        assert len(requests) == 1, "redirect must not send a second request"
+        headers = Message()
+        headers["Location"] = location
+        response = addinfourl(io.BytesIO(b""), headers, req.full_url, code)
+        response.msg = "Redirect"
+        return response
+
+    monkeypatch.setattr(urllib.request.HTTPSHandler, "https_open", respond)
+    monkeypatch.setattr(urllib.request.HTTPHandler, "http_open", respond)
+    monkeypatch.setenv("PEL_TEST_KEY", "synthetic-credential")
+    provider = OpenAICompatProvider(
+        model="m", base_url="https://source.example", api_key_env="PEL_TEST_KEY"
+    )
+    with pytest.raises(ProviderError, match=f"HTTP {code}"):
+        provider.complete("x")
+    assert len(requests) == 1
+
+
+def test_http_error_body_is_not_reported(monkeypatch: pytest.MonkeyPatch) -> None:
+    key = "synthetic-credential"
+
+    def respond(handler: Any, req: Any) -> Any:
+        response = addinfourl(
+            io.BytesIO(f'{{"error":"Invalid key: {key}"}}'.encode()),
+            Message(),
+            req.full_url,
+            401,
+        )
+        response.msg = "Unauthorized"
+        return response
+
+    monkeypatch.setattr(urllib.request.HTTPSHandler, "https_open", respond)
+    monkeypatch.setenv("PEL_TEST_KEY", key)
+    provider = OpenAICompatProvider(
+        model="m", base_url="https://source.example", api_key_env="PEL_TEST_KEY"
+    )
+    suite = parse_suite({"tests": [{"prompt": "x"}]})
+    results = run_suite(suite, provider)
+    assert results[0].status == "error"
+    assert "HTTP 401" in results[0].messages()[0]
+    for text in (
+        format_table(results),
+        to_json(build_report("s", provider.label, 1, results)),
+        to_junit("s", results),
+    ):
+        assert key not in text
 
 
 def test_mock_default_echo() -> None:

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +37,46 @@ def _parse_file(path: Path) -> Any:
         raise LoadError(f"invalid JSON in {path}: {exc}") from exc
 
 
+def _validate_schema(schema: Any, where: str) -> None:
+    if not isinstance(schema, dict):
+        raise LoadError(f"{where}: needs a mapping")
+    if "type" in schema:
+        types = schema["type"] if isinstance(schema["type"], list) else [schema["type"]]
+        known = ("object", "array", "string", "number", "integer", "boolean", "null")
+        if not types or any(not isinstance(t, str) or t not in known for t in types):
+            raise LoadError(f"{where}: invalid type")
+    for key in ("minimum", "maximum"):
+        if key in schema:
+            value = schema[key]
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or (isinstance(value, float) and not math.isfinite(value))
+            ):
+                raise LoadError(f"{where}: {key} needs a finite number")
+    for key in ("minLength", "maxLength", "minItems", "maxItems"):
+        if key in schema and (
+            isinstance(schema[key], bool) or not isinstance(schema[key], int) or schema[key] < 0
+        ):
+            raise LoadError(f"{where}: {key} needs a non-negative integer")
+    if "enum" in schema and (not isinstance(schema["enum"], list) or not schema["enum"]):
+        raise LoadError(f"{where}: enum needs a non-empty list")
+    if "required" in schema and (
+        not isinstance(schema["required"], list)
+        or any(not isinstance(key, str) for key in schema["required"])
+    ):
+        raise LoadError(f"{where}: required needs a list of strings")
+    if "properties" in schema:
+        if not isinstance(schema["properties"], dict):
+            raise LoadError(f"{where}: properties needs a mapping")
+        for key, sub in schema["properties"].items():
+            if not isinstance(key, str):
+                raise LoadError(f"{where}: property names must be strings")
+            _validate_schema(sub, f"{where}.properties.{key}")
+    if "items" in schema:
+        _validate_schema(schema["items"], f"{where}.items")
+
+
 def _expectation(raw: Any, where: str) -> Expectation:
     if not isinstance(raw, dict):
         raise LoadError(f"{where}: expectation must be a mapping")
@@ -56,6 +97,8 @@ def _expectation(raw: Any, where: str) -> Expectation:
         raise LoadError(f"{where}: {kind} needs an integer")
     if kind == "json_schema" and not isinstance(value, dict):
         raise LoadError(f"{where}: json_schema needs a mapping")
+    if kind == "json_schema":
+        _validate_schema(value, f"{where}: json_schema")
     if kind in ("contains", "not_contains", "regex", "equals") and value is None:
         raise LoadError(f"{where}: {kind} needs a value")
     if kind == "regex":

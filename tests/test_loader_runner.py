@@ -22,6 +22,36 @@ from prompt_eval_lite.runner import summarize
 EXAMPLES = Path(__file__).resolve().parent.parent / "examples"
 
 
+@pytest.mark.parametrize(
+    "schema",
+    [
+        {"minimum": "zero"},
+        {"maximum": True},
+        {"minimum": float("nan")},
+        {"type": "unknown"},
+        {"type": ["string", 1]},
+        {"type": []},
+        {"type": {}},
+        {"enum": 1},
+        {"enum": []},
+        {"required": "x"},
+        {"required": [1]},
+        {"properties": []},
+        {"properties": {"x": {"minLength": "2"}}},
+        {"properties": {"x": 3}},
+        {"items": []},
+        {"items": {"maxItems": -1}},
+        {"minLength": True},
+        {"maxLength": 1.5},
+        {"minItems": -1},
+        {"maxItems": "2"},
+    ],
+)
+def test_invalid_schema_rejected_at_load_time(schema: Any) -> None:
+    with pytest.raises(LoadError, match="json_schema"):
+        parse_suite({"tests": [{"prompt": "x", "expect": [{"json_schema": schema}]}]})
+
+
 def write(tmp_path: Path, name: str, data: Any) -> Path:
     p = tmp_path / name
     p.write_text(data if isinstance(data, str) else json.dumps(data), encoding="utf-8")

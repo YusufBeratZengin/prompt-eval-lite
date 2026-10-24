@@ -7,6 +7,26 @@ from prompt_eval_lite.expectations import parse_json_output, validate_schema
 from prompt_eval_lite.template import TemplateError, render
 
 
+@pytest.mark.parametrize("output", ["NaN", "Infinity", "-Infinity", "1e999", '[{"x": NaN}]'])
+def test_nonfinite_json_is_rejected(output: str) -> None:
+    assert not ok("is_json", True, output)
+    assert not ok("json_schema", {"type": "number", "minimum": 0, "maximum": 1}, output)
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_schema_rejects_nonfinite_numbers(value: float) -> None:
+    assert validate_schema(value, {"minimum": 0, "maximum": 1})
+    assert validate_schema({"x": [value]}, {})
+
+
+@pytest.mark.parametrize("keyword", ["enum", "const"])
+@pytest.mark.parametrize("value,output", [(1, "true"), (False, "0"), ({"x": [1]}, '{"x":[true]}')])
+def test_json_equality_distinguishes_booleans(keyword: str, value: object, output: str) -> None:
+    schema = {keyword: [value] if keyword == "enum" else value}
+    assert not ok("json_schema", schema, output)
+    assert ok("json_schema", {keyword: [1] if keyword == "enum" else 1}, "1.0")
+
+
 def ok(kind: str, value: object, output: str, ignore_case: bool = False) -> bool:
     return check(Expectation(kind, value, ignore_case), output) is None
 

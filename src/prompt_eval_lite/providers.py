@@ -19,6 +19,13 @@ class ProviderError(RuntimeError):
     """A model call failed (network, HTTP status, malformed response, configuration)."""
 
 
+class _NoRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(
+        self, req: Any, fp: Any, code: int, msg: str, headers: Any, newurl: str
+    ) -> None:
+        return None
+
+
 class Provider(ABC):
     name = "provider"
 
@@ -96,11 +103,12 @@ class _HttpProvider(Provider):
             method="POST",
         )
         try:
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+            opener = urllib.request.build_opener(_NoRedirect())
+            with opener.open(req, timeout=self.timeout) as resp:
                 return json.loads(resp.read().decode("utf-8"))
         except urllib.error.HTTPError as exc:
-            body = exc.read().decode("utf-8", "replace")[:200]
-            raise ProviderError(f"HTTP {exc.code} from {self.name}: {body}") from exc
+            exc.close()
+            raise ProviderError(f"HTTP {exc.code} from {self.name}") from None
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             raise ProviderError(f"cannot reach {self.name} at {self.base_url}: {exc}") from exc
         except ValueError as exc:
